@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<style> /* set the CSS */
+
+body {
+  font: 12px Arial;
+  background-color: #FFF;
+}
+
+
+
+.axis path,
+.axis line {
+    fill: none;
+    stroke: grey;
+    stroke-width: 1;
+    shape-rendering: crispEdges;
+}
+
+.tooltip {
+    position: absolute;
+    text-align: left;
+    width: 200px;
+    height: 45px;
+    padding: 5px;
+    font: 11px sans-serif;
+    background: #DDD;
+    border: 2px;
+    border-radius: 5px;
+    pointer-events: none;
+}
+
+.tooltip_large {
+    position: absolute;
+    top: 810px;
+    left: 0px;
+    text-align: left;
+    width: 600px;
+    height: 450px;
+    padding: 5px;
+    font: 11px sans-serif;
+    border: 2px;
+    border-radius: 5px;
+    pointer-events: none;
+}
+
+.area2 {
+    position: absolute;
+    top: 300px;
+    left: 500px;
+    width: 1000px;
+    height: 500px;
+}
+
+.analysis {
+  position: absolute;
+  top: 350;
+  left: 100;
+  width: 550px;
+  max-width: 550px;
+  height: 250px;
+  text-align: left;
+  font: 12px sans-serif;
+  padding: 2px;
+}
+
+.kf_title {
+  text-align: left;
+}
+
+svg {
+  border: 1px solid white;
+}
+
+</style>
+
+
+
+<script src="https://d3js.org/d3.v4.min.js"></script>
+<script src="colorbrewer.js"></script>
+
+<div id="area2"></div>
+<div id="analysis"><hr></div>
+<div id="area1"></div>
+
+<script>
+
+var	margin = {top: 20, right: 300, bottom: 30, left: 0},
+	width = 1300 - margin.left - margin.right,
+	height = 365 - margin.top - margin.bottom;
+
+
+var chart1 = d3.select("#area1")
+    .append("svg")
+      .attr("width", width + margin.left + margin.right)
+      .attr("height", height + margin.top + margin.bottom)
+    .append("g")
+      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+    //.style("filter", "url(#gooey)");
+
+var parseTime = d3.timeParse("%H%M");
+
+var	margin2 = {top: 100, right: 0, bottom: 30, left: 300},
+	width2 = 1300 - margin.left - margin.right,
+	height2 = 350 - margin.top - margin.bottom;
+
+var chart2 = d3.select("#area2")
+    .append("svg")
+      .attr("width", width2 + margin2.left + margin2.right)
+      .attr("height", height2 + margin2.top + margin2.bottom)
+    .append("g")
+      .attr("transform", "translate(" + margin2.left + "," + margin2.top + ")");
+
+
+//SVG filter for the gooey effect
+//Code taken from http://tympanus.net/codrops/2015/03/10/creative-gooey-effects/
+var defs = chart1.append('defs');
+var filter = defs.append('filter').attr('id','gooey');
+filter.append('feGaussianBlur')
+	.attr('in','SourceGraphic')
+	.attr('stdDeviation','4')
+	.attr('result','blur');
+filter.append('feColorMatrix')
+	.attr('in','blur')
+	.attr('mode','matrix')
+	.attr('values','1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 14 -4')
+	.attr('result','gooey');
+filter.append('feComposite')
+	.attr('in','SourceGraphic')
+	.attr('in2','gooey')
+	.attr('operator','atop');
+filter.append("feBlend")
+	.attr("in","SourceGraphic")
+	.attr("in2","gooey");
+
+
+var x = d3.scaleTime()
+    .rangeRound([20, width]);
+
+/*
+var xValue = function(d) {
+  return parseTime(d.time);
+},
+    xScale = d3.scale.linear().rangeRound([20, width]),
+    xMap = function(d) {return xScale(xValue(d));},
+    xAxis = d3.svg.axis().scale(xScale).orient("bottom")
+    .tickFormat(function(d) {
+      return xScale.tickFormat(20, d3.format(",d"))(d);
+    });
+*/
+
+var y = d3.scaleLinear()
+    .rangeRound([height - 20, 20]);
+
+//var color = d3.scaleOrdinal(d3.schemeCategory20);
+//var color = d3.scaleOrdinal(["#32964d", "#fe74fe", "#154975", "#dfccfa", "#334edc", "#55f17b", "#ec102f", "#2eece6", "#6c2c76", "#b9cf84", "#4220f0", "#a8dde6", "#0b5313", "#f49177"]);
+/*var color = d3.scaleOrdinal(["#32964d", "#fe74fe", "#154975", "#dfccfa",
+  "#334edc", "#55f17b", "#ec102f", "#2eece6", "#6c2c76", "#b9cf84", "#4220f0",
+  "#a8dde6", "#0b5313", "#f49177", "#aaa"]);
+*/
+/*var color = d3.scaleOrdinal(['#a6cee3','#1f78b4','#b2df8a','#33a02c','#fb9a99',
+    '#e31a1c','#fdbf6f','#ff7f00','#cab2d6','#6a3d9a','#ba8d66','#b15928',
+    '#666', '#aaa']);*/
+var color = d3.scaleOrdinal(['#a6cee3','#1f78b4','#b2df8a','#33a02c','#fb9a99',
+    '#e31a1c','#fdbf6f','#ff7f00','#cab2d6','#6a3d9a','#a6cee3','#1f78b4',
+    '#666', '#aaa']);
+
+//var color = d3.scaleOrdinal(colorbrewer.Reds[3]);
+//var color = d3.scaleOrdinal(["#6baed6","#3182bd","#08519c"]);
+
+
+//var color = d3.scaleOrdinal()
+//            .domain(function(d) {return d.keyframe;})
+//            .range(d3.schemeCategory20);
+
+/*
+var yValue = function(d) {
+  return d.keyframe;
+},
+    yScale = d3.scale.linear().range([height - 20, 20]),
+    yMap = function(d) {return yScale(yValue(d));},
+    yAxis = d3.svg.axis().scale(yScale).orient("left")
+    .tickFormat(function(d) {
+      return yScale.tickFormat(20, d3.format(",d"))(d);
+    });
+*/
+
+var line = d3.line()
+    .x(function(d) { return x(d.time); })
+    .y(function(d) { return y(d.keyframe); });
+
+/*
+var cValue = function(d) {return d.keyframe;},
+  color = d3.scale.category10();
+*/
+
+//d3.csv("data_keyframe_test.csv", function(d) {
+d3.csv("keyframe_full_time_grouped.csv", function(d) {
+  d.time = parseTime(d.time);
+  d.time_unformat = +d.time;
+  d.keyframe = +d.keyframe;
+  d.radius = +d.radius;
+  d.tweetID = +d.tweetID;
+  d.selected = false;
+  return d;
+}, function(error, data) {
+  if (error) throw error;
+
+
+    x.domain(d3.extent(data, function(d) { return d.time; }));
+    y.domain(d3.extent(data, function(d) { return d.keyframe; }));
+
+/*
+  xScale.domain(d3.extent(data, function(d) { return d.time; }));
+  yScale.domain(d3.extent(data, function(d) { return d.keyframe; }));
+*/
+
+//var cValue = function(d) {return d.keyframe; },
+//  color = d3.scale.category10();
+
+//var cValue = d3.scale.category10(function(d) {return d.keyframe});
+
+var selected_items = [];
+
+
+var analysis_text = "";
+
+analysis_text = analysis_text.concat("RENOVATION / ELECTRICAL FIRE:&#xA;");
+analysis_text = analysis_text.concat("The Dancing Dolphin apartment complex is currently undergoing renovations on the top three floors of the six-story building. This renovation has been ongoing. One resident, twitter user GreyCatCollectibles, noticed an odd odor coming from the above floor, indicating a possible source of the fire.");
+analysis_text = analysis_text.concat("&#xA;&#xA;");
+analysis_text = analysis_text.concat("17:16	GreyCatCollectibles		They've been ripping up our building for weeks now - when will it stop?  #nopeace");
+analysis_text = analysis_text.concat("&#xA;");
+analysis_text = analysis_text.concat("18:25	GreyCatCollectibles		Smell something funny upstairs - wish this renovation work would get finished!");
+analysis_text = analysis_text.concat("&#xA;");
+analysis_text = analysis_text.concat("18:50	AbilaPost		reports that the top three floors are under renovation @dancingdolphin #AbilaPost");
+analysis_text = analysis_text.concat("&#xA;");
+analysis_text = analysis_text.concat("18:50	HomelandIlluminations		Residents report top floors of apartments were unoccupied. #HI");
+analysis_text = analysis_text.concat("&#xA;");
+analysis_text = analysis_text.concat("However, this evidence does not rule out other potential causes, such as arson.");
+analysis_text = analysis_text.concat("&#xA;&#xA;");
+analysis_text = analysis_text.concat("ARSON&#xA;");
+analysis_text = analysis_text.concat("Speculation from twitter user trollingsnark: &#xA;18:44 trollingsnark: Wouldn't be surprised if this is just to distract us from the POK rally");
+analysis_text = analysis_text.concat("&#xA;&#xA;");
+analysis_text = analysis_text.concat("This tweet suggests that a building was caught on fire to distract the public from the POK rally. This does not appear to make sense, because the POK rally has been peaceful up until this point. This user previously tweeted about the fire, saying that no one cared about it: &#xA;18:41 trollingsnark: Look at that, another fire and nobody seems to care");
+analysis_text = analysis_text.concat("&#xA;&#xA;");
+analysis_text = analysis_text.concat("Twitter user OnlytheTruth also suggests arson. It is unclear if they have reason to suspect this:&#xA;18:47 OnlytheTruth: Whoever did this, thank you!!! #firestarter");
+analysis_text = analysis_text.concat("&#xA;&#xA;");
+
+
+
+
+/*
+var analysis = d3.select("#analysis").append('textarea')
+    .attr("class", "analysis")
+    .attr("id", "analysis")
+    .attr('type','textarea')
+    .attr('name','textInput')
+    .attr("cols", 50)
+    .attr("rows", 10)
+    .html(analysis_text);
+    */
+
+/*
+var spacer = d3.select("#analysis").append("div")
+    .html("</br>");
+*/
+var clear = [];
+
+/*
+var clear_button = d3.select("body").append("input")
+    .attr("type", "button")
+    .attr("value", "Reset Links")
+    .attr("name", "clear_button")
+    .on("click", function() {
+      d3.select("#tooltip_large")
+        .html(function() {
+          //TODO: reset colors on selected nodes
+          selected_items = [];
+          populate_table(selected_items);
+        });
+
+      g.selectAll(".dot")
+          .data(data)
+          .style("fill", function(d) {
+            d.selected = false;
+            return color(d.keyframe_name); });
+
+      g.selectAll("line")
+        .data(data)
+        .style("stroke", "black")
+        .style("opacity", .4);
+      });
+*/
+/*
+var clear_button = d3.select("body").append("input")
+    .attr("type", "button")
+    .attr("value", "Reset")
+    .attr("name", "clear_button")
+    .on("click", function() {
+      d3.select("#tooltip_large")
+        .html(function() {
+          //TODO: reset colors on selected nodes
+          selected_items = [];
+          populate_table(clear)
+        })
+        .transition();
+
+        g.selectAll(".dot")
+            .data(data)
+            .style("fill", function(d) { return color(d.keyframe_name); });
+
+        g.selectAll(".path")
+            .data(data)
+            .style("stroke", "black")
+            .style("stroke-width", "1")
+            .style("opacity", .4);
+    });
+    */
+
+var tooltip_large = d3.select("body").append("div")
+  .attr("class", "tooltip_large")
+  .attr("id", "tooltip_large")
+  .html(populate_table(clear))
+  .style("opacity", 1);
+
+
+var tooltip = d3.select("body").append("div")
+  .attr("class", "tooltip")
+  .style("opacity", 0);
+
+
+
+function get_overlap(data, d) {
+  var total_overlapped_items = [];
+
+  //console.log(data.length + " items in dataset");
+  console.log(d.time + " : " + d.keyframe);
+
+  for(var element = 0; element < data.length; element++) {
+    if(data[element].time_unformat == d.time_unformat && data[element].keyframe == d.keyframe) {
+      total_overlapped_items.push(data[element]);
+    }
+  }
+  console.log(total_overlapped_items.length + " items overlapping");
+  return total_overlapped_items;
+}
+
+var double_tweets = [];
+
+
+function get_pairs(data, d) {
+  var total_pairs = [];
+    var double_tweet = false;
+  for(var element = 0; element < data.length; element++) {
+    //same tweet in a different keyframe
+
+    if(data[element].tweetID == d.tweetID && data[element].keyframe != d.keyframe) {
+      total_pairs.push(data[element]);
+      double_tweet = true;
+
+      for(var i = 0; i < double_tweets.length; i++) {
+        if(double_tweets[i].tweetID == data[element].tweetID) {
+          double_tweet = false;
+        }
+      }
+
+    }
+  }
+  if(double_tweet) {
+    double_tweets.push(d);
+  }
+
+  return total_pairs;
+}
+
+
+
+function populate_table(list_of_items) {
+  var string1 = "<h2>Microblog Data</h2><table style='width:100%;'>";
+  var column_names = ["Time", "Author", "Message"];
+
+  string1 = string1.concat("<tr>");
+
+  column_names.forEach(function (element) {
+    string1 = string1.concat("<td class='column_title'>");
+    string1 = string1.concat("<strong >" + element + "</strong>");
+    string1 = string1.concat("</td>");
+  });
+
+  string1 = string1.concat("</tr>");
+
+  for(var item = 0; item < list_of_items.length; item++) {
+    //string1 = string1.concat("<td>");
+    //string1 = string1.concat(list_of_items[item].tweetID);
+    //string1 = string1.concat("</td>");
+    string1 = string1.concat("<td>");
+    string1 = string1.concat(list_of_items[item].date.substring(8,10) +
+        ":" + list_of_items[item].date.substring(10,12));
+    string1 = string1.concat("</td>");
+    string1 = string1.concat("<td>");
+    string1 = string1.concat(list_of_items[item].author);
+    string1 = string1.concat("</td>");
+    string1 = string1.concat("<td>");
+    string1 = string1.concat(list_of_items[item].message);
+    string1 = string1.concat("</td>");
+
+    string1 = string1.concat("</tr>");
+  }
+
+  string1 = string1.concat("</table>");
+  return string1;
+}
+
+
+
+  chart1.append("g")
+      .attr("transform", "translate(0," + height + ")")
+      .call(d3.axisBottom(x)
+          .ticks(10, "%H:%M"));
+  //  .select(".domain")
+  //    .remove();
+
+/*
+  g.append("g")
+      .call(d3.axisLeft(y)
+        .ticks(16, "s"))
+    .append("text")
+      .attr("fill", "#000")
+      .attr("transform", "rotate(-90)")
+      .attr("y", 6)
+      .attr("dy", "0.71em")
+      .attr("text-anchor", "end")
+      .text("Keyframe");
+      */
+
+
+data.forEach(function(d) {
+  get_pairs(data, d);
+});
+
+var line_start = [];
+var line_end = [];
+
+console.log("Double tweets: " + double_tweets.length);
+for(var item = 0; item < double_tweets.length; item++) {
+
+  //data.forEach(function(double_tweets) {
+    var pairs = [];
+    pairs = get_pairs(data, double_tweets[item]);
+    /*console.log("Number of pairs for tweet " + double_tweets[item].tweetID +
+        " is " + pairs.length + " with x, y " + x(double_tweets[item].time) +
+      ", " + y(double_tweets[item].keyframe));*/
+  for(var i = 0; i < pairs.length; i++) {
+      chart1.selectAll(".path")
+           .data(pairs)
+           .enter().append("line")
+           .attr("stroke", "#000")
+           .attr("stroke-width", "1px")
+           .attr("x1", x(double_tweets[item].time))
+           .attr("y1", y(double_tweets[item].keyframe))
+           .attr("x2", x(pairs[i].time))
+           .attr("y2", y(pairs[i].keyframe))
+           .style("opacity", .15)
+           .on("mouseover", function(d) {
+                 //if($.inArray(d, selected_items) === -1) {
+                 d3.select(this).style("stroke", "black");
+                 d3.select(this).style("stroke-width", "2");
+                 d3.select(this).style("opacity", 1);
+                 tooltip.transition()
+                     .duration(150)
+                     .style("opacity", 1);
+                 tooltip.html("<b>" + d.author + "</b>: " + d.message)
+                     .style("left", (d3.event.pageX + 5) + "px")
+                     .style("top", (d3.event.pageY - 20) + "px");
+                 })
+             .on("click", function(d) {
+                /* var overlapped_items = get_overlap(data, d);
+                 console.log("Overlapped items: " + overlapped_items.length);
+                 for(var item = 0; item < overlapped_items.length; item++) {
+                   var exists = false;
+                   //check to see if already in table
+                   for(var i = 0; i < selected_items.length; i++) {
+                     if(selected_items[i].tweetID == overlapped_items[item].tweetID) {
+                       exists = true;
+                     }
+                   }
+                     //if(selected_items.indexOf(overlapped_items[item]) === -1) {
+                     if(!exists) {
+                       selected_items.push(overlapped_items[item]);
+                     }
+                 }*/
+               //d3.select(this).style("stroke", "#D30547");
+              // d3.select(this).style("stroke", "magenta");
+              // d3.select(this).style("stroke-width", "2");
+              // d3.select(this).style("opacity", 1);
+               /*tooltip_large.html(populate_table(selected_items, 1, d));
+               tooltip_large.transition()
+                 .duration(150)
+                 .style("opacity", 1);*/
+             })
+             /*.on("dblclick", function(d) {
+               var overlapped_items = get_overlap(data, d);
+               console.log("Overlapped items: " + overlapped_items.length);
+               console.log("Selected items: " + selected_items.length);
+               for(var item = 0; item < overlapped_items.length; item++) {
+                 var exists = false;
+                 //check to see if already in table
+                 for(var i = 0; i < selected_items.length; i++) {
+                     var index = selected_items.indexOf(overlapped_items[item]);
+                     selected_items.splice(index, 1);
+              }
+            }
+               d3.select(this).style("stroke", "black");
+               d3.select(this).style("stroke-width", "1");
+               d3.select(this).style("opacity", .4);
+               tooltip_large.html(populate_table(selected_items, 1, d));
+               tooltip_large.transition()
+                 .duration(150)
+                 .style("opacity", 1);
+             })*/
+             .on("mouseout", function(d) {
+                 //selected_items = [];
+                 //tooltip_large.html(populate_table(selected_items, 1, d));
+                 d3.select(this).style("stroke", "black");
+                 d3.select(this).style("stroke-width", "1px");
+                 d3.select(this).style("opacity", .4);
+                 /*tooltip.transition()
+                     .duration(150)
+                     .style("opacity", 0);*/
+             });
+
+     }
+
+  //})
+}
+
+/*
+ g.selectAll(".path")
+      .data(data)
+      .enter().append("line")
+      .attr("class", "path")
+      .attr("stroke", "#000")
+      .attr("x1", function(d) {return x(d.time);})
+      .attr("y1", function(d) {return y(d.keyframe);})
+      .attr("x2", function(d) {return x(d.time);})
+      .attr("y2", function(d) {return (y(d.keyframe) - 20);});
+*/
+
+
+  chart1.selectAll(".dot")
+      .data(data)
+      .enter().append("circle")
+      .attr("class", "dot")
+      .attr("r", function(d) { return d.radius})
+      //.attr("r", 6)
+      .attr("cx", function(d) { return x(d.time); })
+      .attr("cy", function(d) { return y(d.keyframe); })
+      .style("fill", function(d) { return color(d.keyframe_name); })
+      .style("opacity", 1)
+      //.style("opacity", 1)
+      .style("filter", "url(#gooey)")
+      .on("mouseover", function(d) {
+            //if($.inArray(d, selected_items) === -1) {
+
+            tooltip.transition()
+                .duration(150)
+                .style("opacity", 1);
+            tooltip.html("<b>" + d.author + "</b>: " + d.message)
+                .style("left", (d3.event.pageX + 5) + "px")
+                .style("top", (d3.event.pageY - 20) + "px");
+            })
+        .on("click", function(d) {
+          var overlapped_items = get_overlap(data, d);
+          console.log("Overlapped items: " + overlapped_items.length);
+          console.log("Selected items: " + selected_items.length);
+          for(var item = 0; item < overlapped_items.length; item++) {
+            var exists = false;
+            //check to see if already in table
+            for(var i = 0; i < selected_items.length; i++) {
+              if(selected_items[i].tweetID == overlapped_items[item].tweetID) {
+                exists = true;
+              }
+            }
+              //if(selected_items.indexOf(overlapped_items[item]) === -1) {
+              if(!exists) {
+                  selected_items.push(overlapped_items[item]);
+              }
+              if(d.selected) {
+                var index = selected_items.indexOf(overlapped_items[item]);
+                selected_items.splice(index, 1);
+              }
+
+          }
+        //}
+        if(!d.selected) {
+            d3.select(this).style("fill", "magenta");
+            d.selected = true;
+          }
+          else {
+            d3.select(this).style("fill", function(d) { return color(d.keyframe_name); });
+
+            d.selected = false;
+          }
+        d3.select(this).style("opacity", 1);
+        tooltip_large.html(populate_table(selected_items, 1, d));
+        tooltip_large.transition()
+          .duration(150)
+          .style("opacity", 1);
+        })
+      /*  .on("dblclick", function(d) {
+          d3.select(this).style("stroke", "black");
+          d3.select(this).style("stroke-width", "1px");
+        })*/
+        .on("mouseout", function(d) {
+            //selected_items = [];
+            //tooltip_large.html(populate_table(selected_items, 1, d));
+            tooltip.transition()
+                .duration(150)
+                .style("opacity", 0);
+        });
+      /*.on("mouseover", function(d) {
+        tooltip.transition()
+          .duration(150)
+          .style("opacity", .9)
+          tooltip.html("<strong class='author'>" + d['author'] + "</strong>")
+          .style("left", (d3.event.pageX + 5) + "px")
+          .style("top", (d3.event.pageY - 28) + "px");
+      });*/
+
+
+  var legend = chart1.selectAll(".legend")
+      .data(color.domain())
+      .enter().append("g")
+      .attr("class", "legend")
+      .attr("transform", function(d, i) {return "translate(0," + i * 21 + ")"});
+
+  legend.append("rect")
+      .attr("x", width + 15)
+      .attr("y", 10)
+      .attr("width", 18)
+      .attr("height", 18)
+      .style("fill", color)
+      .style("stroke", function(d, i) {
+        if(i==8) {
+          return "black";
+        }
+        return "none";
+      })
+
+  legend.append("text")
+      .attr("x", width + 37)
+      .attr("y", 19)
+      .attr("dy", ".35em")
+      .style("text-anchor", "start")
+      .style("font-size", "12px")
+      .style("font-weight", function(d, i) {
+        if(i==8) {
+          return "bold";
+        }
+        return "normal";
+      })
+      .style("font-family", "sans-serif")
+      .text(function(d) {return d;});
+
+/*
+  svg.append("path")
+      .datum(data)
+      .attr("fill", "none")
+      .attr("stroke", "steelblue")
+      .attr("stroke-linejoin", "round")
+      .attr("stroke-linecap", "round")
+      .attr("stroke-width", 1.5)
+      .attr("d", line);
+      */
+
+
+
+      var graph_data = {
+         nodes: [
+           {name: "KF13", x: 3500, y: 170, id: 0, selected: false},//0
+           {name: "KF12", x: 3500, y: 130, id: 1, selected: false},//1
+           {name: "KF11", x: 3500, y: 90, id: 2, selected: false},//2
+           {name: "KF10", x: 3500, y: 50, id: 3, selected: false},//3
+           {name: "KF9", x: 3500, y: 10, id: 4, selected: false},//4
+           {name: "KF8", x: 3500, y: 130, id: 5, selected: false},//5
+           {name: "KF7", x: 360, y: 240, id: 6, selected: false},//6
+           {name: "KF6", x: -140, y: 230, id: 7, selected: false},//7
+           {name: "KF5", x: 170, y: 50, id: 8, selected: false},//8
+           {name: "KF4", x: 500, y: 20, id: 9, selected: false},//11
+           {name: "KF3", x: -125, y: 40, id: 10, selected: false},//9
+           {name: "KF2", x: 750, y: 50, id: 11, selected: false},//10
+           {name: "KF1", x: 700, y: 230, id: 12, selected: false},//12
+           //{name: "KF0", x: 10, y: 10},//13
+         ],
+         links: [
+           {source: 8, target: 7},
+           {source: 8, target: 11},
+           {source: 8, target: 9},
+           {source: 8, target: 6},
+           {source: 10, target: 8},
+           {source: 12, target: 8},
+           {source: 0, target: 1},
+           {source: 1, target: 2},
+           {source: 2, target: 3},
+           {source: 4, target: 3},
+           {source: 6, target: 7},
+           {source: 12, target: 6},
+           {source: 10, target: 7}
+         ]
+       };
+
+       var c10 = d3.scaleOrdinal(d3.schemeCategory20);
+/*       var svg = d3.select("body")
+         .append("svg")
+         .attr("width", 1200)
+         .attr("height", 800);
+*/
+
+var rw = 250;
+var rh = 175;
+
+       var drag = d3.drag()
+         .on("drag", function(d, i) {
+           d.x += d3.event.dx
+           d.y += d3.event.dy
+           d3.select(this).attr("x", d.x - (rw / 2)).attr("y", d.y - (rh / 2));
+           /*labels.each(function(t, ti) {
+             if(d.id == ti) {
+               d3.select(this).attr("x", d.x - 10).attr("y", d.y + 5);
+             }
+           })*/
+           links.each(function(l, li) {
+             if (l.source == i) {
+               d3.select(this).attr("x1", d.x).attr("y1", d.y);
+             } else if (l.target == i) {
+               d3.select(this).attr("x2", d.x).attr("y2", d.y);
+             }
+           });
+         });
+
+
+       var links = chart2.selectAll("link")
+         .data(graph_data.links)
+         .enter()
+         .append("line")
+         .attr("class", "link")
+         .attr("x1", function(l) {
+           var sourceNode = graph_data.nodes.filter(function(d, i) {
+             return i == l.source;
+           })[0];
+           d3.select(this).attr("y1", sourceNode.y);
+           return sourceNode.x;
+         })
+         .attr("x2", function(l) {
+           var targetNode = graph_data.nodes.filter(function(d, i) {
+             return i == l.target;
+           })[0];
+           d3.select(this).attr("y2", targetNode.y);
+           return targetNode.x;
+         })
+         .attr("fill", "none")
+         .attr("stroke", "black")
+         .attr("stroke-width", "1px");
+
+/*       var nodes = chart2.selectAll("node")
+         .data(graph_data.nodes)
+         .enter()
+         .append("circle")
+             .attr("class", "node")
+             .attr("cx", function(d) {
+               return d.x
+             })
+             .attr("cy", function(d) {
+               return d.y
+             })
+             .attr("r", 15)
+             //.attr("stroke", "black")
+             .attr("fill", function(d, i) {
+               return color(i);
+             })
+         .call(drag);
+*/
+
+/*         var nodes = chart2.selectAll("node")
+           .data(graph_data.nodes)
+           .enter()
+           .append("rect")
+               .attr("class", "node")
+               .attr("x", function(d) {
+                 return d.x - (rw / 2);
+               })
+               .attr("y", function(d) {
+                 return d.y - (rh / 2);
+               })
+               .attr("width", rw)
+               .attr("height", rh)
+               .attr("stroke-width", "2px")
+               .attr("stroke", function(d) {
+                 if(d.id == 8) {
+                   return "black";
+                 }
+                 else {
+                   return "none";
+                 }
+               })
+               .attr("fill", function(d, i) {
+                 return color(i);
+               })
+           .call(drag);
+           */
+
+           var nodes = chart2.selectAll("node")
+             .data(graph_data.nodes)
+             .enter()
+             .append("svg:image")
+                 .attr("class", "node")
+                 .attr("x", function(d) {
+                   return d.x - (rw / 2);
+                 })
+                 .attr("y", function(d) {
+                   return d.y - (rh / 2);
+                 })
+                 .attr("width", rw)
+                 .attr("height", rh)
+                 .attr("xlink:href", function(d,i) {
+                    var string = "resources/keyframe_";
+                    if(i > 5) {
+                      var index = 13 - i;
+                      string = string.concat(index + ".svg");
+                    }
+                    else {
+                      string = string.concat("blank.png");
+                    }
+                    return string;
+
+               })
+             .on("click", function(d) {
+               if(!d.selected) {
+                 d.selected = true;
+                 var w = rw * 1.5;
+                 var h = rh * 1.5;
+                 d3.select(this).attr("x", d.x - (w / 2));
+                 d3.select(this).attr("y", d.y - (h / 2));
+                 d3.select(this).attr("width", w);
+                 d3.select(this).attr("height", h);
+
+                 //bring the image to the front
+                 chart2.selectAll("image").sort(function (a, b) { // select the parent and sort the nodes
+                     if (a.id != d.id) return -1;// a is not the hovered element, send "a" to the back
+                     else return 1; // a is the hovered element, bring "a" to the front
+                   });
+               }
+               else {
+                 d.selected = false;
+                 d3.select(this).attr("x", d.x - (rw / 2));
+                 d3.select(this).attr("y", d.y - (rh / 2));
+                 d3.select(this).attr("width", rw);
+                 d3.select(this).attr("height", rh);
+               }
+             })
+             .call(drag);
+
+/*         var labels = chart2.selectAll("node")
+            .data(graph_data.nodes)
+            .enter()
+            .append("text")
+            .attr("x", function(d) {return d.x - 10;})
+            .attr("y", function(d) {return d.y + 5;})
+            .text(function(d) {
+              return d.name;
+            });
+            */
+
+
+
+
+
+
+/*
+      var legend2 = chart2.selectAll(".legend")
+          .data(color.domain())
+          .enter().append("g")
+          .attr("class", "legend")
+          .attr("transform", function(d, i) {return "translate(0," + i * 21 + ")"});
+
+      legend2.append("rect")
+          .attr("x", 10)
+          .attr("y", 10)
+          .attr("width", 18)
+          .attr("height", 18)
+          .style("fill", color)
+          .style("stroke", function(d, i) {
+            if(i==8) {
+              return "black";
+            }
+            return "none";
+          })
+
+      legend2.append("text")
+          .attr("x", 37)
+          .attr("y", 19)
+          .attr("dy", ".35em")
+          .style("text-anchor", "start")
+          .style("font-size", "12px")
+          .style("font-weight", function(d, i) {
+            if(i==8) {
+              return "bold";
+            }
+            return "normal";
+          })
+          .style("font-family", "sans-serif")
+          .text(function(d) {return d;});
+*/
+
+});
+
+</script>
