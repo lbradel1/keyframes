@@ -32,24 +32,33 @@ body {
 
 .tooltip_large {
     position: absolute;
-    top: 820px;
-    left: 8px;
+    top: 10px;
+    left: 10px;
     text-align: left;
-    width: 600px;
-    height: 350px;
+    width: 320px;
+    height: 570px;
     padding: 5px;
     font: 11px sans-serif;
     background-color: #FFF;
-    border: 2px solid #FFF;
-    border-radius: 3px;
-    overflow: auto;
+    border: 2px solid #000;
+    border-radius: 1px;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.area1 {
+  position: absolute;
+  top: 597px;
+  left: 10px;
+  width: 1300px;
+  height: 500px;
 }
 
 .area2 {
     position: absolute;
-    top: 300px;
-    left: 500px;
-    width: 1000px;
+    top: 10px;
+    left: 10px;
+    width: 1300px;
     height: 500px;
 }
 
@@ -71,7 +80,7 @@ body {
 
 svg {
   /*border: 2px solid #535f6b;*/
-  border: 2px solid #FFF;
+  border: 2px solid #000;
   /*background-color: #e3e7ea;*/
   background-color: #FFF;
   border-radius: 3px;
@@ -88,16 +97,15 @@ svg {
 <script src="https://d3js.org/d3.v4.min.js"></script>
 <script src="colorbrewer.js"></script>
 
-<div id="area2"></div>
-<hr>
+<div class="area2" id="area2"></div>
 <!-- <div id="analysis"><hr></div> -->
-<div id="area1"></div>
+<div class="area1" id="area1"></div>
 
 <script>
 
-var	margin = {top: 20, right: 300, bottom: 30, left: 0},
-	width = 1300 - margin.left - margin.right,
-	height = 365 - margin.top - margin.bottom;
+var	margin = {top: 20, right: 220, bottom: 30, left: 0},
+	width = 1350 - margin.left - margin.right,
+	height = 270 - margin.top - margin.bottom;
 
 
 var chart1 = d3.select("#area1")
@@ -110,9 +118,9 @@ var chart1 = d3.select("#area1")
 
 var parseTime = d3.timeParse("%H%M");
 
-var	margin2 = {top: 100, right: 0, bottom: 30, left: 300},
-	width2 = 1300 - margin.left - margin.right,
-	height2 = 350 - margin.top - margin.bottom;
+var	margin2 = {top: 100, right: 200, bottom: 30, left: 600},
+	width2 = 1350 - margin2.left - margin2.right,
+	height2 = 580 - margin2.top - margin2.bottom;
 
 var chart2 = d3.select("#area2")
     .append("svg")
@@ -393,7 +401,7 @@ function get_pairs(data, d) {
 
 
 function populate_table(list_of_items) {
-  var string1 = "<h2>Microblog Data</h2><table style='width:100%;'>";
+  var string1 = "<h2><center>Microblog Data</center></h2><hr><table style='width:100%;'>";
   var column_names = ["Time", "Author", "Message"];
 
   string1 = string1.concat("<tr>");
@@ -642,40 +650,71 @@ for(var item = 0; item < double_tweets.length; item++) {
           .style("top", (d3.event.pageY - 28) + "px");
       });*/
 
+      var toggleColor = (function(d){
+         var currentColor = "none";
+
+          return function(){
+              currentColor = currentColor == "none" ? "black" : "none";
+              d3.select(this).style("stroke", currentColor);
+              if(currentColor == "black") {
+                d3.select(this).style("font-weight", "bold");
+              }
+              else {
+                d3.select(this).style("font-weight", "normal");
+              }
+              currentColor = "none";
+          }
+      })();
+
+      var toggleWeight = (function(d){
+         var currentWeight = "normal";
+
+          return function(){
+              currentWeight = currentWeight == "normal" ? "bold" : "normal";
+              d3.select(this).style("font-weight", currentWeight);
+              currentWeight = "normal";
+          }
+      })();
 
   var legend = chart1.selectAll(".legend")
       .data(color.domain())
       .enter().append("g")
       .attr("class", "legend")
-      .attr("transform", function(d, i) {return "translate(0," + i * 21 + ")"});
+      .attr("transform", function(d, i) {return "translate(0," + i * 14 + ")"});
 
   legend.append("rect")
-      .attr("x", width + 15)
-      .attr("y", 10)
-      .attr("width", 18)
-      .attr("height", 18)
+      .attr("x", width + 10)
+      .attr("y", 12)
+      .attr("width", 12)
+      .attr("height", 12)
       .style("fill", color)
+      .style("stroke-width", "1px")
       .style("stroke", function(d, i) {
         if(i > 4 && i < 13) {
-          return "black";
+          //return "black";
+          return "none";
         }
         return "none";
       })
+      .on("click", toggleColor);
+
 
   legend.append("text")
-      .attr("x", width + 37)
-      .attr("y", 19)
+      .attr("x", width + 25)
+      .attr("y", 17)
       .attr("dy", ".35em")
       .style("text-anchor", "start")
-      .style("font-size", "12px")
+      .style("font-size", "11px")
       .style("font-weight", function(d, i) {
         if(i > 4 && i < 13) {
-          return "bold";
+          //return "bold";
+          return "normal";
         }
         return "normal";
       })
       .style("font-family", "sans-serif")
-      .text(function(d) {return d;});
+      .text(function(d) {return d;})
+      .on("click", toggleWeight);
 
 /*
   svg.append("path")
@@ -698,13 +737,13 @@ for(var item = 0; item < double_tweets.length; item++) {
            {name: "KF10", x: 3500, y: 50, id: 3, selected: false},//3
            {name: "KF9", x: 3500, y: 10, id: 4, selected: false},//4
            {name: "KF8", x: 3500, y: 130, id: 5, selected: false},//5
-           {name: "KF7", x: 360, y: 240, id: 6, selected: false},//6
-           {name: "KF6", x: -140, y: 230, id: 7, selected: false},//7
+           {name: "KF7", x: 200, y: 340, id: 6, selected: false},//6
+           {name: "KF6", x: -140, y: 300, id: 7, selected: false},//7
            {name: "KF5", x: 170, y: 50, id: 8, selected: false},//8
            {name: "KF4", x: 500, y: 20, id: 9, selected: false},//11
            {name: "KF3", x: -125, y: 40, id: 10, selected: false},//9
-           {name: "KF2", x: 750, y: 50, id: 11, selected: false},//10
-           {name: "KF1", x: 700, y: 230, id: 12, selected: false},//12
+           {name: "KF2", x: 580, y: 200, id: 11, selected: false},//10
+           {name: "KF1", x: 530, y: 370, id: 12, selected: false},//12
            //{name: "KF0", x: 10, y: 10},//13
          ],
          links: [
