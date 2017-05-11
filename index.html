@@ -41,17 +41,16 @@ body {
     font: 11px sans-serif;
     background-color: #FFF;
     border: 2px solid #000;
-    border-radius: 1px;
     overflow-y: auto;
     overflow-x: hidden;
 }
 
 .area1 {
   position: absolute;
-  top: 597px;
+  top: 590px;
   left: 10px;
   width: 1300px;
-  height: 500px;
+  height: 300px;
 }
 
 .area2 {
@@ -83,7 +82,6 @@ svg {
   border: 2px solid #000;
   /*background-color: #e3e7ea;*/
   background-color: #FFF;
-  border-radius: 3px;
 
 }
 
@@ -99,6 +97,7 @@ svg {
 
 <div class="area2" id="area2"></div>
 <!-- <div id="analysis"><hr></div> -->
+<div class="tooltip_large" id="tooltip_large"></div>
 <div class="area1" id="area1"></div>
 
 <script>
@@ -342,11 +341,16 @@ var clear_button = d3.select("body").append("input")
     });
     */
 
-var tooltip_large = d3.select("body").append("div")
+/*var tooltip_large = d3.select("body").append("div")
   .attr("class", "tooltip_large")
   .attr("id", "tooltip_large")
   .html(populate_table(clear))
   .style("opacity", 1);
+  */
+
+  var tooltip_large = d3.select("#tooltip_large")
+    .html(populate_table(clear))
+    .style("opacity", 1);
 
 
 var tooltip = d3.select("body").append("div")
